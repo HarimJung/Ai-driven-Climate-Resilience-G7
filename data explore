@@ -1,0 +1,213 @@
+import React, { useState, useEffect } from 'react';
+import { Download, Loader, Database, Eye, Check } from 'lucide-react';
+
+const G7FullDataExplorer = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // G7 주요 거점 (도시/농촌/산간 혼합)
+  const locations = [
+    { country: "Canada", city: "Toronto (Urban)", lat: 43.70, lon: -79.42 },
+    { country: "Canada", city: "Jasper (Forest)", lat: 52.87, lon: -118.08 },
+    { country: "France", city: "Paris (Urban)", lat: 48.85, lon: 2.35 },
+    { country: "France", city: "Bordeaux (Agri)", lat: 44.84, lon: -0.58 },
+    { country: "Germany", city: "Berlin (Urban)", lat: 52.52, lon: 13.41 },
+    { country: "Germany", city: "Black Forest (Nature)", lat: 48.30, lon: 8.15 },
+  ];
+
+  // API에서 가져올 "모든" 변수 리스트
+  const variables = [
+    // 1. 기본 기온
+    "temperature_2m_max",
+    "temperature_2m_min",
+    "temperature_2m_mean",
+    // 2. 체감 온도 (보건/안전)
+    "apparent_temperature_max",
+    "apparent_temperature_min",
+    "apparent_temperature_mean",
+    // 3. 강수 상세 (홍수/가뭄)
+    "precipitation_sum",
+    "rain_sum",
+    "snowfall_sum",
+    "precipitation_hours", // 비가 온 시간 (지속성)
+    // 4. 바람 & 태양 (에너지)
+    "wind_speed_10m_max",
+    "wind_gusts_10m_max", // 돌풍 (인프라 파괴)
+    "wind_direction_10m_dominant",
+    "shortwave_radiation_sum", // 태양광 발전량
+    // 5. 농업 & 수문 (Agri/Hydro)
+    "et0_fao_evapotranspiration", // 증발산량 (가뭄 지수)
+    "soil_temperature_0_to_7cm_mean", // 토양 온도 (파종)
+    "soil_moisture_0_to_7cm_mean" // 토양 수분 (홍수 포화도)
+  ];
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    setData([]);
+    
+    // 데이터 양이 많으므로 1년치만 로드 (CSV 다운로드는 전체 가능하도록 구조화 가능)
+    const startDate = "2023-01-01";
+    const endDate = "2023-12-31";
+    const variableString = variables.join(",");
+
+    try {
+      let allData = [];
+
+      for (const loc of locations) {
+        const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${loc.lat}&longitude=${loc.lon}&start_date=${startDate}&end_date=${endDate}&daily=${variableString}&timezone=auto`;
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Failed to fetch for ${loc.city}`);
+        const json = await response.json();
+        
+        const daily = json.daily;
+        const dates = daily.time;
+
+        const locData = dates.map((date, i) => {
+            const row = {
+                date: date,
+                country: loc.country,
+                city: loc.city,
+                // 모든 변수 매핑
+                temp_max: daily.temperature_2m_max[i],
+                temp_min: daily.temperature_2m_min[i],
+                temp_mean: daily.temperature_2m_mean[i],
+                app_temp_max: daily.apparent_temperature_max[i],
+                app_temp_mean: daily.apparent_temperature_mean[i],
+                precip_sum: daily.precipitation_sum[i],
+                rain_sum: daily.rain_sum[i],
+                snow_sum: daily.snowfall_sum[i],
+                precip_hrs: daily.precipitation_hours[i],
+                wind_spd: daily.wind_speed_10m_max[i],
+                wind_gust: daily.wind_gusts_10m_max[i],
+                wind_dir: daily.wind_direction_10m_dominant[i],
+                solar_rad: daily.shortwave_radiation_sum[i],
+                evapo: daily.et0_fao_evapotranspiration[i],
+                soil_temp: daily.soil_temperature_0_to_7cm_mean[i],
+                soil_moist: daily.soil_moisture_0_to_7cm_mean[i],
+            };
+            return row;
+        });
+        allData = [...allData, ...locData];
+      }
+      setData(allData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const downloadCSV = () => {
+    if (data.length === 0) return;
+    const headers = Object.keys(data[0]);
+    const csvRows = [headers.join(",")];
+    data.forEach(row => {
+      csvRows.push(Object.values(row).join(","));
+    });
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "G7_FULL_DATASET_ALL_FIELDS.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-50 p-6">
+      <div className="max-w-7xl mx-auto w-full bg-white rounded-xl shadow-xl overflow-hidden flex flex-col h-full border border-slate-200">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 bg-white">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Database className="text-indigo-600" />
+                G7 Full Climate Intelligence Data
+              </h1>
+              <p className="text-slate-500 mt-1 text-sm">
+                Fetching ALL available fields: Temperature, Apparent Temp, Precip Hours, Soil Moisture, Evapotranspiration, Solar Radiation, Wind Gusts...
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-5 py-2.5 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium transition-colors">
+                {loading ? <Loader className="animate-spin w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                {loading ? "Fetching Big Data..." : "Load Real Data"}
+              </button>
+              <button onClick={downloadCSV} disabled={data.length === 0} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                <Download className="w-4 h-4"/>
+                Download CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Area */}
+        <div className="flex-1 overflow-auto relative bg-slate-50">
+          {loading && (
+             <div className="absolute inset-0 bg-white/90 z-20 flex flex-col items-center justify-center">
+               <Loader className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
+               <span className="text-lg font-semibold text-slate-700">Connecting to G7 Meteorological Servers...</span>
+               <span className="text-sm text-slate-500 mt-2">Downloading soil, solar, wind, and temp data matrices</span>
+             </div>
+          )}
+          
+          {!loading && data.length > 0 && (
+            <table className="w-full text-left border-collapse min-w-[1800px]">
+              <thead className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                <tr>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b bg-slate-100 sticky left-0 z-20 w-32">Date</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b bg-slate-100 sticky left-32 z-20 w-32">City</th>
+                  {/* Variables */}
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-red-50">Temp Max</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-red-50">Temp Mean</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-orange-50">Feels Like</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-blue-50">Precip Sum</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-blue-50">Precip Hrs</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-blue-100 border-l border-blue-200">Soil Moist</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-yellow-50">Evapo (Drought)</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-yellow-100">Solar Rad</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-green-50">Wind Spd</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right bg-green-100 text-red-600">Gusts (Danger)</th>
+                  <th className="p-3 text-xs font-bold text-slate-500 uppercase border-b text-right">Wind Dir</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {data.map((row, i) => (
+                  <tr key={i} className="hover:bg-indigo-50 transition-colors text-sm">
+                    <td className="p-3 font-mono text-slate-600 sticky left-0 bg-white border-r">{row.date}</td>
+                    <td className="p-3 font-medium text-slate-800 sticky left-32 bg-white border-r">{row.city}</td>
+                    <td className="p-3 text-right font-mono">{row.temp_max.toFixed(1)}°</td>
+                    <td className="p-3 text-right font-mono text-slate-500">{row.temp_mean.toFixed(1)}°</td>
+                    <td className="p-3 text-right font-mono text-slate-500">{row.app_temp_mean.toFixed(1)}°</td>
+                    <td className={`p-3 text-right font-mono ${row.precip_sum > 10 ? 'font-bold text-blue-600' : 'text-slate-400'}`}>{row.precip_sum}mm</td>
+                    <td className="p-3 text-right font-mono text-slate-500">{row.precip_hrs}h</td>
+                    <td className="p-3 text-right font-mono font-bold text-blue-800 bg-blue-50">{row.soil_moist.toFixed(2)}</td>
+                    <td className="p-3 text-right font-mono text-amber-700">{row.evapo.toFixed(2)}</td>
+                    <td className="p-3 text-right font-mono text-amber-600">{row.solar_rad.toFixed(0)}</td>
+                    <td className="p-3 text-right font-mono text-slate-500">{row.wind_spd.toFixed(1)}</td>
+                    <td className={`p-3 text-right font-mono ${row.wind_gust > 50 ? 'font-bold text-red-600' : 'text-slate-400'}`}>{row.wind_gust.toFixed(1)}</td>
+                    <td className="p-3 text-right font-mono text-slate-400">{row.wind_dir}°</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {!loading && data.length === 0 && (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                <Database className="w-16 h-16 mb-4 opacity-20"/>
+                <p>Click "Load Real Data" to fetch full telemetry from G7 weather servers.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default G7FullDataExplorer;
