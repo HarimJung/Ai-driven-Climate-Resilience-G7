@@ -5,10 +5,10 @@ import {
   Database, MapPin, UploadCloud, Download, Filter, Layers, 
   Zap, Truck, Sprout, ThermometerSun, AlertTriangle, 
   CheckCircle2, ArrowUpRight, Share2, Activity, BookOpen, MoreHorizontal,
-  Calendar, FilePlus, ExternalLink, Eye, X, Maximize2, Hash
+  Calendar, FilePlus, ExternalLink, Eye, X, Maximize2, Hash, RefreshCw, CreditCard, Scale
 } from 'lucide-react';
 
-// --- 1. EXPANDED KNOWLEDGE BASE (REAL-WORLD DATA MOCKUP) ---
+// --- 1. DATA & CONFIGURATION ---
 
 const GEO_CONFIG = {
   'Toronto': { country: 'Canada', flag: '🇨🇦', code: 'CA' },
@@ -21,6 +21,7 @@ const GEO_CONFIG = {
 
 const SCENARIO_CONFIG = {
   'Agri': {
+    id: 'Agri',
     label: 'Agri-Food Security',
     icon: Sprout,
     theme: 'emerald', 
@@ -28,6 +29,7 @@ const SCENARIO_CONFIG = {
     ragTags: ['agri', 'food', 'drought']
   },
   'Energy': {
+    id: 'Energy',
     label: 'Energy Grid Resilience',
     icon: Zap,
     theme: 'amber', 
@@ -35,6 +37,7 @@ const SCENARIO_CONFIG = {
     ragTags: ['energy', 'grid', 'renewable']
   },
   'Supply': {
+    id: 'Supply',
     label: 'Supply Chain Logistics',
     icon: Truck,
     theme: 'blue',
@@ -42,6 +45,7 @@ const SCENARIO_CONFIG = {
     ragTags: ['transport', 'trade', 'logistics']
   },
   'Health': {
+    id: 'Health',
     label: 'Urban Health & Safety',
     icon: ThermometerSun,
     theme: 'rose', 
@@ -50,29 +54,27 @@ const SCENARIO_CONFIG = {
   }
 };
 
-// [정책 DB: 실제 G7 및 UN 정책 기반 시뮬레이션 데이터]
+// [정책 DB: RAG 검색 대상]
 const FULL_POLICY_DB = [
-  // --- GLOBAL / UN (Critical Frameworks) ---
-  { id: 'UN-01', country: 'Global', tags: ['agri', 'food'], title: 'UN Zero Hunger Challenge (SDG 2)', type: 'Goal', year: '2015', desc: 'Global initiative to end hunger, achieve food security and improved nutrition.', excerpt: 'Target 2.4: Ensure sustainable food production systems and implement resilient agricultural practices.' },
-  { id: 'UN-02', country: 'Global', tags: ['energy', 'climate'], title: 'Paris Agreement', type: 'Treaty', year: '2015', desc: 'Legally binding international treaty on climate change adopted by 196 Parties.', excerpt: 'Article 7: Enhancing adaptive capacity, strengthening resilience and reducing vulnerability to climate change.' },
-  { id: 'UN-03', country: 'Global', tags: ['supply', 'risk'], title: 'Sendai Framework for Disaster Risk Reduction', type: 'Framework', year: '2015', desc: 'Global blueprint to prevent new and reduce existing disaster risks.', excerpt: 'Priority 4: Enhancing disaster preparedness for effective response and to "Build Back Better" in recovery.' },
+  // GLOBAL
+  { id: 'GL-01', country: 'Global', tags: ['agri', 'food'], title: 'UN Zero Hunger Challenge (SDG 2)', type: 'Goal', year: '2015', desc: 'Global initiative to end hunger.', excerpt: 'Target 2.4: Ensure sustainable food production systems.' },
+  { id: 'GL-02', country: 'Global', tags: ['energy', 'climate'], title: 'Paris Agreement', type: 'Treaty', year: '2015', desc: 'International treaty on climate change.', excerpt: 'Article 7: Enhancing adaptive capacity and resilience.' },
+  
+  // CANADA
+  { id: 'CA-A1', country: 'Canada', tags: ['agri', 'strategy', 'budget'], title: 'Sustainable Canadian Agricultural Partnership', type: 'Framework', year: '2023', desc: '$3.5B agreement for agri-resilience.', excerpt: 'Clause 4.2: $250M allocated for Resilient Agricultural Landscape Program.' },
+  { id: 'CA-A2', country: 'Canada', tags: ['agri', 'law'], title: 'Canada Grain Act Modernization', type: 'Legislation', year: '2021', desc: 'Grain quality assurance protocols.', excerpt: 'Section 12: Emergency grain storage protocols during extreme weather.' },
+  { id: 'CA-E1', country: 'Canada', tags: ['energy', 'net-zero'], title: '2030 Emissions Reduction Plan', type: 'Strategy', year: '2022', desc: 'Roadmap to 40% emission reduction.', excerpt: 'Chapter 2: Grid modernization investments ($900M) for inter-provincial transmission.' },
 
-  // --- CANADA (Agri & Energy focus) ---
-  { id: 'CA-A1', country: 'Canada', tags: ['agri', 'strategy'], title: 'Sustainable Canadian Agricultural Partnership', type: 'Framework', year: '2023', desc: 'A $3.5 billion, 5-year agreement to strengthen the competitiveness and resilience of the agriculture sector.', excerpt: 'Clause 4.2: $250M allocated for Resilient Agricultural Landscape Program to support soil carbon sequestration.' },
-  { id: 'CA-A2', country: 'Canada', tags: ['agri', 'emergency'], title: 'Canada Grain Act Modernization', type: 'Legislation', year: '2021', desc: 'Updates to grain quality assurance and producer protection protocols.', excerpt: 'Section 12: Emergency grain storage protocols triggered when transport capacity drops below 50% due to weather.' },
-  { id: 'CA-E1', country: 'Canada', tags: ['energy', 'net-zero'], title: '2030 Emissions Reduction Plan', type: 'Strategy', year: '2022', desc: 'Comprehensive roadmap to reach 40-45% emission reductions below 2005 levels.', excerpt: 'Chapter 2: Grid modernization investments ($900M) to support inter-provincial renewable transmission.' },
+  // GERMANY
+  { id: 'DE-E1', country: 'Germany', tags: ['energy', 'law'], title: 'Renewable Energy Sources Act (EEG 2023)', type: 'Legislation', year: '2023', desc: 'Eco-power expansion instrument.', excerpt: 'Para 8: Priority feed-in for renewables established as public security matter.' },
+  { id: 'DE-E2', country: 'Germany', tags: ['energy', 'crisis'], title: 'Energy Security Act (EnSiG)', type: 'Act', year: '2022', desc: 'Energy supply during crisis.', excerpt: 'Article 1, Section 3: Authority to mandate load shedding for non-essential industries.' },
 
-  // --- GERMANY (Energy & Industry focus) ---
-  { id: 'DE-E1', country: 'Germany', tags: ['energy', 'law'], title: 'Renewable Energy Sources Act (EEG 2023)', type: 'Legislation', year: '2023', desc: 'The central instrument for the eco-power expansion in Germany.', excerpt: 'Para 8: Priority feed-in for renewables is established as a matter of overriding public interest and public security.' },
-  { id: 'DE-E2', country: 'Germany', tags: ['energy', 'crisis'], title: 'Energy Security Act (EnSiG)', type: 'Act', year: '2022', desc: 'Legal framework for ensuring energy supply during crisis situations.', excerpt: 'Article 1, Section 3: Federal government authority to mandate load shedding for non-essential industries.' },
-  { id: 'DE-A1', country: 'Germany', tags: ['agri'], title: 'Arable Farming Strategy 2035', type: 'Strategy', year: '2022', desc: 'Long-term strategy for sustainable crop production.', excerpt: 'Guideline 5: Improving water retention in soil through humus build-up to combat increasing drought periods.' },
-
-  // --- FRANCE (Health & Urban focus) ---
-  { id: 'FR-H1', country: 'France', tags: ['health', 'heat'], title: 'Plan National Canicule (Heat Wave Plan)', type: 'Protocol', year: '2023', desc: 'Operational levels for managing extreme heat waves in France.', excerpt: 'Level 3 (Orange): Prefects must activate "ORSEC" emergency plans and open cooling centers in urban zones.' },
-  { id: 'FR-H2', country: 'France', tags: ['health', 'urban'], title: 'Climate and Resilience Law', type: 'Law', year: '2021', desc: 'Wide-ranging law to combat climate change and strengthen resilience.', excerpt: 'Article 15: Ban on renting "thermal sieves" (poorly insulated housing) starting 2025 to protect vulnerable populations.' },
+  // FRANCE
+  { id: 'FR-H1', country: 'France', tags: ['health', 'heat'], title: 'Plan National Canicule', type: 'Protocol', year: '2023', desc: 'Heat wave management levels.', excerpt: 'Level 3 (Orange): Mandatory cooling center activation in urban zones.' },
+  { id: 'FR-H2', country: 'France', tags: ['health', 'law'], title: 'Climate and Resilience Law', type: 'Law', year: '2021', desc: 'Combating climate change.', excerpt: 'Article 15: Ban on renting thermal sieves starting 2025.' },
 ];
 
-// --- 2. COMPONENTS ---
+// --- 2. MAIN COMPONENT ---
 
 const G7PolicyCoPilot = () => {
   // Global State
@@ -84,14 +86,17 @@ const G7PolicyCoPilot = () => {
   // PDF Viewer Modal State
   const [viewingDoc, setViewingDoc] = useState(null); 
 
-  // Dynamic Briefing State (The "Brain")
-  const [briefingData, setBriefingData] = useState({
-    signal: 'Initializing...',
-    status: 'ANALYZING',
-    policyTitle: 'Mapping Policies...',
+  // --- AI BRIEFING STATE (The "Brain" that updates) ---
+  const [aiBriefing, setAiBriefing] = useState({
+    type: 'SCENARIO_DEFAULT', // SCENARIO_DEFAULT, BUDGET_ALERT, LEGAL_REVIEW, ALTERNATIVE_PLAN
+    signal: 'Analyzing...',
+    status: 'NORMAL',
+    policyId: null,
+    policyTitle: 'Scanning Policy DB...',
     policyExcerpt: '...',
-    action: 'Calculating Strategy...'
+    action: 'Standby'
   });
+  const [briefingFlash, setBriefingFlash] = useState(false); // Visual update trigger
 
   // Chat State
   const [chatOpen, setChatOpen] = useState(true);
@@ -102,7 +107,7 @@ const G7PolicyCoPilot = () => {
 
   // Policy Lib State
   const [searchTerm, setSearchTerm] = useState('');
-  const [docs, setDocs] = useState(FULL_POLICY_DB); // Local state for docs (allowing uploads)
+  const [docs, setDocs] = useState(FULL_POLICY_DB);
   
   // Derived
   const currentCountry = GEO_CONFIG[selectedCity].country;
@@ -114,18 +119,22 @@ const G7PolicyCoPilot = () => {
     doc.tags.some(tag => currentConfig.ragTags.includes(tag))
   );
 
-  // --- EFFECT: Update Briefing on Context Change ---
+  // --- EFFECT: Reset on Context Change ---
   useEffect(() => {
-    // 1. Initial Message
+    // 1. Reset Briefing to Scenario Default
+    resetBriefingToScenario();
+
+    // 2. System Message
     setMessages(prev => [...prev, {
       id: Date.now(),
       sender: 'ai',
       type: 'text',
-      content: `[시스템 모드 변경] ${selectedCity}(${currentCountry}) / ${currentConfig.label} 모니터링을 시작합니다. 관련 UN 및 국가 정책 ${contextPolicies.length}건이 로드되었습니다.`
+      content: `[시스템 모드 변경] ${selectedCity}(${currentCountry}) / ${currentConfig.label} 모니터링 모드로 전환되었습니다.`
     }]);
+  }, [selectedCity, activeScenario]);
 
-    // 2. Simulate AI Analysis based on Scenario
-    // 시나리오가 바뀌면 기본 '초기값'을 설정하되, 채팅으로 바꿀 수 있게 함
+  // Helper: Reset Briefing
+  const resetBriefingToScenario = () => {
     let signal = "Normal";
     let status = "STABLE";
     let action = "Monitor";
@@ -148,15 +157,18 @@ const G7PolicyCoPilot = () => {
         action = "Reroute Logistics";
     }
 
-    setBriefingData({
+    const defaultPolicy = contextPolicies[0] || FULL_POLICY_DB[0];
+
+    setAiBriefing({
+        type: 'SCENARIO_DEFAULT',
         signal: signal,
         status: status,
-        policyTitle: contextPolicies[0]?.title || "Generic Protocol",
-        policyExcerpt: contextPolicies[0]?.excerpt || "No specific clause found.",
+        policyId: defaultPolicy?.id,
+        policyTitle: defaultPolicy?.title || "Standard Protocol",
+        policyExcerpt: defaultPolicy?.excerpt || "No specific clause found.",
         action: action
     });
-
-  }, [selectedCity, activeScenario]);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -174,46 +186,63 @@ const G7PolicyCoPilot = () => {
     setTimeout(() => {
       setIsTyping(false);
       
-      // Dynamic Logic based on User Input (This is the AI Brain Simulation)
-      let newBriefing = { ...briefingData };
+      // --- AI BRAIN LOGIC ---
+      const query = input.toLowerCase();
+      let newBriefing = { ...aiBriefing };
       let replyContent = "";
       let matchedDoc = contextPolicies[0];
-      let actionTitle = "View Analysis";
+      let actionLabel = "View Details";
 
-      // 키워드에 따라 대시보드의 '전략(Strategy)'을 바꿈
-      if (input.includes("예산") || input.includes("돈") || input.includes("funding")) {
+      // 1. BUDGET INQUIRY
+      if (query.includes("예산") || query.includes("돈") || query.includes("funding") || query.includes("budget") || query.includes("cost")) {
+          newBriefing.type = "BUDGET_ALERT";
           newBriefing.signal = "Budgetary Gap Detected";
-          newBriefing.status = "FINANCIAL ALERT";
-          newBriefing.action = "Authorize Emergency Fund";
-          replyContent = "예산 관련 정책 조항을 분석했습니다. 긴급 자금 투입이 가능한 조항을 찾았습니다. 대시보드 전략을 '자금 집행' 모드로 전환합니다.";
-          // Find a funding related doc if possible
-          matchedDoc = contextPolicies.find(p => p.excerpt.includes('$') || p.tags.includes('strategy')) || contextPolicies[0];
-          newBriefing.policyTitle = matchedDoc.title;
-          newBriefing.policyExcerpt = matchedDoc.excerpt;
-          actionTitle = "Approve Funds";
+          newBriefing.status = "FINANCIAL REVIEW";
+          newBriefing.action = "Approve Emergency Fund";
+          
+          matchedDoc = contextPolicies.find(p => p.tags.includes('budget') || p.tags.includes('strategy')) || contextPolicies[0];
+          newBriefing.policyId = matchedDoc?.id;
+          newBriefing.policyTitle = matchedDoc?.title;
+          newBriefing.policyExcerpt = matchedDoc?.excerpt;
+          
+          replyContent = `예산 관련 조항을 분석했습니다. '${matchedDoc.title}'에 의거하여 긴급 자금 투입이 가능합니다. 대시보드를 '재정 분석 모드'로 업데이트했습니다.`;
 
-      } else if (input.includes("법") || input.includes("규제") || input.includes("law")) {
-          newBriefing.action = "Legal Review Required";
-          replyContent = "관련 법령 및 규제 사항을 검토하여 대시보드에 반영했습니다. 법적 리스크가 감지됩니다.";
-          matchedDoc = contextPolicies.find(p => p.type === 'Legislation' || p.type === 'Law' || p.type === 'Act') || contextPolicies[0];
-          newBriefing.policyTitle = matchedDoc.title;
-          newBriefing.policyExcerpt = matchedDoc.excerpt;
-          actionTitle = "Review Law";
+      // 2. LEGAL INQUIRY
+      } else if (query.includes("법") || query.includes("규제") || query.includes("law") || query.includes("regulation") || query.includes("legal")) {
+          newBriefing.type = "LEGAL_REVIEW";
+          newBriefing.signal = "Regulatory Compliance Check";
+          newBriefing.status = "LEGAL HOLD";
+          newBriefing.action = "Review Legal Framework";
 
-      } else if (input.includes("대안") || input.includes("방법") || input.includes("solution")) {
-          newBriefing.action = "Deploy Alternative Route";
-          replyContent = "현재 위기 상황에 대한 대체 프로토콜(Alternative Protocol)을 제안합니다.";
-          matchedDoc = contextPolicies[1] || contextPolicies[0]; // Switch to second policy
-          newBriefing.policyTitle = matchedDoc.title;
-          newBriefing.policyExcerpt = matchedDoc.excerpt;
-          actionTitle = "Deploy Alt";
+          matchedDoc = contextPolicies.find(p => p.tags.includes('law') || p.tags.includes('legislation')) || contextPolicies[0];
+          newBriefing.policyId = matchedDoc?.id;
+          newBriefing.policyTitle = matchedDoc?.title;
+          newBriefing.policyExcerpt = matchedDoc?.excerpt;
 
+          replyContent = `관련 법령 및 규제 사항을 검토하여 대시보드에 반영했습니다. 법적 리스크가 감지되어 '준법 감시' 모드로 전환합니다.`;
+
+      // 3. GENERAL INQUIRY (RAG SEARCH)
       } else {
-          replyContent = `RAG 엔진이 ${currentCountry}의 정책 문서와 UN 프레임워크를 교차 분석하여 답변을 생성 중입니다.`;
+          newBriefing.type = "RAG_SEARCH_RESULT";
+          newBriefing.signal = "Ad-hoc Query Analysis";
+          newBriefing.status = "ANALYZING";
+          newBriefing.action = "View Search Result";
+          
+          // Simple random simulation for "finding" a different doc
+          const randomIdx = Math.floor(Math.random() * contextPolicies.length);
+          matchedDoc = contextPolicies[randomIdx] || FULL_POLICY_DB[0];
+          
+          newBriefing.policyId = matchedDoc?.id;
+          newBriefing.policyTitle = matchedDoc?.title;
+          newBriefing.policyExcerpt = matchedDoc?.excerpt;
+
+          replyContent = `RAG 엔진이 '${input}'에 대한 ${currentCountry} 정책 문서를 분석했습니다. 가장 연관성 높은 정책을 대시보드에 매핑했습니다.`;
       }
 
-      // Update Dashboard UI (The connection between Chat -> Dashboard)
-      setBriefingData(newBriefing);
+      // Trigger Dashboard Update Animation
+      setBriefingFlash(true);
+      setAiBriefing(newBriefing);
+      setTimeout(() => setBriefingFlash(false), 800);
 
       // Reply in Chat
       setMessages(prev => [...prev, {
@@ -223,48 +252,32 @@ const G7PolicyCoPilot = () => {
         title: 'Strategy Updated',
         policyTitle: matchedDoc?.title,
         excerpt: matchedDoc?.excerpt,
-        action: actionTitle,
+        action: "View Document",
         docId: matchedDoc?.id,
         content: replyContent
       }]);
 
-    }, 1000);
+    }, 800);
   };
 
   const openPdfViewer = (docId) => {
-    const doc = docs.find(d => d.id === docId);
+    const doc = FULL_POLICY_DB.find(d => d.id === docId);
     if (doc) setViewingDoc(doc);
   };
 
   const closePdfViewer = () => setViewingDoc(null);
 
   const simulateDownload = (title) => {
-    alert(`Downloading package for: ${title}\nIncludes: PDF Report, Raw Data (CSV), Visualization Snapshot`);
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Simulate file upload and indexing
-      const newDoc = {
-        id: Date.now(),
-        country: currentCountry,
-        tags: [currentConfig.ragTags[0], 'uploaded'],
-        title: file.name,
-        type: 'Uploaded Report',
-        year: '2025',
-        desc: 'User uploaded document. Pending detailed vector analysis.',
-        excerpt: 'Content indexing in progress... RAG vectors will be available shortly.'
-      };
-      setDocs([newDoc, ...docs]);
-      
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        sender: 'ai',
-        type: 'text',
-        content: `문서 '${file.name}' 업로드 완료. RAG 엔진에 인덱싱되었습니다. 이제 이 문서를 기반으로 질의응답이 가능합니다.`
-      }]);
-    }
+    // Toast notification simulation
+    const id = Date.now();
+    const toast = document.createElement('div');
+    toast.className = "fixed bottom-4 right-4 bg-slate-800 text-white px-4 py-2 rounded-lg shadow-lg z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300 text-sm";
+    toast.innerText = `Downloading: ${title}...`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.innerText = "Download Complete!";
+        setTimeout(() => toast.remove(), 2000);
+    }, 1500);
   };
 
   // --- RENDER HELPERS ---
@@ -343,12 +356,12 @@ const G7PolicyCoPilot = () => {
               {/* Scenario & Actions */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                  <div className="flex bg-white p-1.5 rounded-full border border-slate-200 shadow-sm overflow-x-auto max-w-full">
-                   {Object.entries(SCENARIO_CONFIG).map(([key, config]) => (
+                   {Object.values(SCENARIO_CONFIG).map((config) => (
                      <button
-                        key={key}
-                        onClick={() => setActiveScenario(key)}
+                        key={config.id}
+                        onClick={() => setActiveScenario(config.id)}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all whitespace-nowrap ${
-                          activeScenario === key 
+                          activeScenario === config.id 
                             ? `bg-${config.theme}-600 text-white shadow-md` 
                             : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                         }`}
@@ -393,56 +406,67 @@ const G7PolicyCoPilot = () => {
                  </div>
               </div>
 
-              {/* AI Strategic Analysis */}
+              {/* AI Strategic Analysis (Dynamic) */}
               <div>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-200">
                     <MessageSquareText className="text-white" size={20} />
                   </div>
                   <h3 className="text-xl font-bold text-slate-800">AI Strategic Briefing</h3>
-                  <span className="text-xs font-medium px-2 py-1 bg-slate-100 rounded text-slate-500 animate-pulse">
-                    Live updates from Chat Context
+                  <span className={`text-xs font-medium px-2 py-1 rounded transition-colors ${
+                    briefingFlash ? 'bg-yellow-100 text-yellow-800' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {briefingFlash ? 'UPDATING FROM CHAT...' : 'Live Context Active'}
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Card 1: Signal */}
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-red-200 transition-all group h-full">
+                <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 transition-all duration-300 ${briefingFlash ? 'opacity-50 scale-[0.99]' : 'opacity-100 scale-100'}`}>
+                  
+                  {/* Card 1: Signal (Type Aware) */}
+                  <div className={`p-6 rounded-2xl border shadow-sm transition-all group h-full ${
+                    aiBriefing.type === 'BUDGET_ALERT' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
+                  }`}>
                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-100 transition-colors"><Activity size={24}/></div>
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${
-                          briefingData.status === 'CRITICAL' || briefingData.status === 'DANGER' || briefingData.status === 'FINANCIAL ALERT' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                        <div className={`p-3 rounded-xl transition-colors ${
+                           aiBriefing.type === 'BUDGET_ALERT' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-50 text-red-600'
                         }`}>
-                          {briefingData.status}
+                           {aiBriefing.type === 'BUDGET_ALERT' ? <CreditCard size={24}/> : <Activity size={24}/>}
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${
+                          aiBriefing.type === 'BUDGET_ALERT' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                        }`}>
+                          {aiBriefing.status}
                         </span>
                      </div>
                      <div className="text-xs font-bold text-slate-400 uppercase mb-1">Detected Signal</div>
-                     <div className="text-xl font-bold text-slate-800 mb-2">{briefingData.signal}</div>
+                     <div className="text-xl font-bold text-slate-800 mb-2">{aiBriefing.signal}</div>
                      <p className="text-sm text-slate-500 leading-relaxed">
-                       AI analysis of telemetry vs. policy baselines. Context: {activeScenario}.
+                       {aiBriefing.type === 'BUDGET_ALERT' ? 'Chat command triggered financial protocol review.' : 'Automated telemetry analysis active.'}
                      </p>
                   </div>
 
                   {/* Card 2: Policy Map (Clickable) */}
                   <div 
-                    onClick={() => openPdfViewer(contextPolicies.find(p => p.title === briefingData.policyTitle)?.id)}
+                    onClick={() => openPdfViewer(aiBriefing.policyId)}
                     className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group h-full flex flex-col cursor-pointer"
                   >
                      <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-100 transition-colors"><BookOpen size={24}/></div>
+                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-100 transition-colors">
+                           {aiBriefing.type === 'LEGAL_REVIEW' ? <Scale size={24}/> : <BookOpen size={24}/>}
+                        </div>
                         <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full uppercase flex items-center gap-1">
                           RAG Match <ArrowUpRight size={10}/>
                         </span>
                      </div>
-                     <div className="text-xs font-bold text-slate-400 uppercase mb-1">Primary Protocol</div>
-                     <div className="text-lg font-bold text-slate-800 mb-2 line-clamp-2">{briefingData.policyTitle}</div>
+                     <div className="text-xs font-bold text-slate-400 uppercase mb-1">Mapped Protocol</div>
+                     <div className="text-lg font-bold text-slate-800 mb-2 line-clamp-2">{aiBriefing.policyTitle}</div>
                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4 flex-1">
                         <p className="text-xs text-slate-600 italic leading-relaxed">
-                          "{briefingData.policyExcerpt}"
+                          "{aiBriefing.policyExcerpt}"
                         </p>
                      </div>
                      <div className="text-xs font-bold text-indigo-600 flex items-center gap-1 group-hover:underline">
-                       Click to read full policy document
+                       Click to read document
                      </div>
                   </div>
 
@@ -453,9 +477,9 @@ const G7PolicyCoPilot = () => {
                            <CheckCircle2 size={24} className={`text-${currentConfig.theme}-600`}/>
                            <span className={`text-xs font-bold text-${currentConfig.theme}-700 uppercase`}>Recommendation</span>
                         </div>
-                        <h4 className={`text-2xl font-bold text-${currentConfig.theme}-900 mb-3`}>{briefingData.action}</h4>
+                        <h4 className={`text-2xl font-bold text-${currentConfig.theme}-900 mb-3`}>{aiBriefing.action}</h4>
                         <p className={`text-sm text-${currentConfig.theme}-800 font-medium leading-relaxed mb-6`}>
-                          Execute this protocol immediately to mitigate the detected risks in accordance with national guidelines.
+                          Execute this protocol immediately to mitigate risks. Authorization pending.
                         </p>
                         <button className="mt-auto w-full py-3 bg-white rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all text-slate-800">
                           Authorize Action
@@ -491,13 +515,9 @@ const G7PolicyCoPilot = () => {
                         className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
                       />
                    </div>
-                   <button 
-                     onClick={() => document.getElementById('upload-doc').click()}
-                     className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 flex items-center gap-2 whitespace-nowrap"
-                   >
+                   <button className="px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 flex items-center gap-2 whitespace-nowrap">
                       <UploadCloud size={16}/> Upload
                    </button>
-                   <input id="upload-doc" type="file" className="hidden" onChange={handleFileUpload} />
                  </div>
                </div>
 
@@ -506,25 +526,19 @@ const G7PolicyCoPilot = () => {
                    .filter(d => d.title.toLowerCase().includes(searchTerm.toLowerCase()))
                    .map(doc => (
                    <div key={doc.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group flex flex-col h-full">
-                      
-                      {/* Header */}
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex gap-2">
-                           <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase tracking-wide">{doc.type}</span>
-                           <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded uppercase tracking-wide">{doc.country}</span>
+                           <span className="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded uppercase">{doc.type}</span>
+                           <span className="px-2 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded uppercase">{doc.country}</span>
                         </div>
                         <span className="text-xs font-medium text-slate-400 flex items-center gap-1"><Calendar size={12}/> {doc.year}</span>
                       </div>
-                      
-                      {/* Title & Desc */}
                       <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-2 group-hover:text-indigo-600 transition-colors">
                         {doc.title}
                       </h3>
                       <p className="text-sm text-slate-500 mb-4 line-clamp-2">
                         {doc.desc}
                       </p>
-
-                      {/* Hashtags */}
                       <div className="flex flex-wrap gap-2 mb-4">
                          {doc.tags.map(t => (
                            <span key={t} className="text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-100 flex items-center gap-1">
@@ -532,16 +546,10 @@ const G7PolicyCoPilot = () => {
                            </span>
                          ))}
                       </div>
-
-                      {/* RAG Excerpt (Highlighted) */}
                       <div className="mt-auto bg-amber-50/50 p-3 rounded-xl border border-amber-100 mb-4">
                          <p className="text-[10px] font-bold text-amber-700 mb-1 uppercase tracking-wide">RAG Extract</p>
-                         <p className="text-xs text-slate-700 italic line-clamp-3">
-                           "{doc.excerpt}"
-                         </p>
+                         <p className="text-xs text-slate-700 italic line-clamp-3">"{doc.excerpt}"</p>
                       </div>
-
-                      {/* Actions */}
                       <div className="pt-4 border-t border-slate-100 flex gap-3">
                         <button 
                           onClick={() => openPdfViewer(doc.id)}
@@ -662,14 +670,14 @@ const G7PolicyCoPilot = () => {
                onChange={e => setInput(e.target.value)} 
                onKeyDown={e => e.key === 'Enter' && handleSend()}
                className="flex-1 bg-transparent border-none text-sm focus:ring-0 placeholder:text-slate-400 pl-2" 
-               placeholder="Ask about data trends or policies..." 
+               placeholder="Try asking: 'Emergency Budget' or 'Legal Risk'..." 
              />
              <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-md"><Send size={16}/></button>
            </div>
         </div>
       </div>
 
-      {/* 4. PDF VIEWER MODAL (Interactive) */}
+      {/* 4. PDF VIEWER MODAL */}
       {viewingDoc && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
            <div className="bg-white w-[90%] h-[90%] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
